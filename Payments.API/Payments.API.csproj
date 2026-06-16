@@ -16,6 +16,7 @@
   <ItemGroup>
     <Folder Include="Consumers\" />
     <Folder Include="Contracts\" />
+    <Folder Include="Controllers\" />
     <Folder Include="Services\" />
   </ItemGroup>
 

@@ -1,3 +1,6 @@
+using Payments.API.Messaging;
+using Payments.API.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -5,6 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddSingleton<IMessageBus, RabbitMqMessageBus>(); 
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+
 
 var app = builder.Build();
 

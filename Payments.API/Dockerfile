@@ -13,6 +13,8 @@ RUN dotnet publish "Payments.API.csproj" -c Release -o /app/publish /p:UseAppHos
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+
 COPY --from=publish /app/publish .
 
 ENTRYPOINT ["dotnet", "Payments.API.dll"]
+

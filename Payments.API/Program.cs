@@ -10,7 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IMessageBus, RabbitMqMessageBus>(); 
-builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPagamentoService, PagamentoService>();
 
 
 
@@ -22,7 +22,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

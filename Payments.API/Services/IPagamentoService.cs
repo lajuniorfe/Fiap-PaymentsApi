@@ -2,7 +2,7 @@
 
 namespace Payments.API.Services
 {
-    public interface IPaymentService
+    public interface IPagamentoService
     {
         Task<PaymentProcessedEvent> ProcessarPagamento(OrderPlacedEvent order);
     }

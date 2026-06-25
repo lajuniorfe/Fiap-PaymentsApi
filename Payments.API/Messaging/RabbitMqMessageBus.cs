@@ -14,9 +14,9 @@ namespace Payments.API.Messaging
         {
             var factory = new ConnectionFactory
             {
-                HostName = configuration["RabbitMq:Host"],
-                UserName = configuration["RabbitMq:User"],
-                Password = configuration["RabbitMq:Password"]
+                HostName = configuration["RabbitMQ:Host"],
+                UserName = configuration["RabbitMQ:Username"],
+                Password = configuration["RabbitMQ:Password"]
             };
 
             _connection = factory.CreateConnectionAsync().Result;

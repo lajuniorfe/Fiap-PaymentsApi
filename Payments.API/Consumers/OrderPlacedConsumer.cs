@@ -7,11 +7,11 @@ namespace Payments.API.Consumers
     public class OrderPlacedConsumer: BackgroundService
     {
         private readonly IMessageBus _messageBus;
-        private readonly IPaymentService _paymentService;
+        private readonly IPagamentoService _paymentService;
 
         public OrderPlacedConsumer(
             IMessageBus messageBus,
-            IPaymentService paymentService)
+            IPagamentoService paymentService)
         {
             _messageBus = messageBus;
             _paymentService = paymentService;

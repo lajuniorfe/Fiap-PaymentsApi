@@ -17,25 +17,18 @@ namespace Payments.API.Consumers
             _paymentService = paymentService;
         }
 
-        protected override async Task ExecuteAsync(
-            CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await _messageBus.SubscribeAsync<OrderPlacedEvent>(
-                "order-placed",
-                ProcessOrderAsync);
+            _messageBus.SubscribeAsync<OrderPlacedEvent>("order-placed", ProcessOrderAsync);
+
+            return Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
-        private async Task ProcessOrderAsync(
-            OrderPlacedEvent order)
+        private async Task ProcessOrderAsync(OrderPlacedEvent order)
         {
-            //processar o pagamento
-            var paymentResult =
-                await _paymentService.ProcessarPagamento(order);
+            var paymentResult = await _paymentService.ProcessarPagamento(order);
 
-            //publicar o evento de pagamento processado
-            await _messageBus.PublishAsync(
-                "payment-processed",
-                paymentResult);
+            await _messageBus.PublishAsync("payment-processed", paymentResult);
         }
     }
 }

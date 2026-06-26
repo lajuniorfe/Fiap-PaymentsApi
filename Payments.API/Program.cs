@@ -1,3 +1,4 @@
+using Payments.API.Consumers;
 using Payments.API.Messaging;
 using Payments.API.Services;
 
@@ -11,7 +12,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<IMessageBus, RabbitMqMessageBus>(); 
 builder.Services.AddScoped<IPagamentoService, PagamentoService>();
-
+builder.Services.AddHostedService<OrderPlacedConsumer>();
 
 
 var app = builder.Build();

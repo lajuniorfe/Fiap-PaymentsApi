@@ -4,31 +4,37 @@ using Payments.API.Services;
 
 namespace Payments.API.Consumers
 {
-    public class OrderPlacedConsumer: BackgroundService
+    public class OrderPlacedConsumer : BackgroundService
     {
         private readonly IMessageBus _messageBus;
-        private readonly IPagamentoService _paymentService;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public OrderPlacedConsumer(
-            IMessageBus messageBus,
-            IPagamentoService paymentService)
+        public OrderPlacedConsumer(IMessageBus messageBus, IServiceScopeFactory scopeFactory)
         {
             _messageBus = messageBus;
-            _paymentService = paymentService;
+            _scopeFactory = scopeFactory;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _messageBus.SubscribeAsync<OrderPlacedEvent>("order-placed", ProcessOrderAsync);
+            await _messageBus.SubscribeAsync<OrderPlacedEvent>("order-placed", ProcessOrderAsync);
 
-            return Task.Delay(Timeout.Infinite, stoppingToken);
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
         private async Task ProcessOrderAsync(OrderPlacedEvent order)
         {
-            var paymentResult = await _paymentService.ProcessarPagamento(order);
+            //var paymentResult = await _scopeFactory.ProcessarPagamento(order);
 
-            await _messageBus.PublishAsync("payment-processed", paymentResult);
+            //await _messageBus.PublishAsync("payment-processed", paymentResult);
+
+            using var scope = _scopeFactory.CreateScope();
+
+            var pagamentoService = scope.ServiceProvider.GetRequiredService<IPagamentoService>();
+
+            await pagamentoService.ProcessarPagamento(order);
+
+         
         }
     }
 }

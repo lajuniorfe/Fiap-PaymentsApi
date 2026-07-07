@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: payments-api
+  labels:
+    app: payments-api
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: payments-api
+
+  template:
+    metadata:
+      labels:
+        app: payments-api
+
+    spec:
+      containers:
+      - name: payments-api
+        image: seuusuario/payments-api:latest
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 8080
+
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+
+        - name: RabbitMQ__Host
+          value: rabbitmq

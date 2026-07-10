@@ -20,16 +20,15 @@ spec:
 
     spec:
       containers:
-      - name: payments-api
-        image: seuusuario/payments-api:latest
-        imagePullPolicy: IfNotPresent
+        - name: payments-api
+          image: lajunior/payments-api:latest
+          imagePullPolicy: IfNotPresent
 
-        ports:
-        - containerPort: 8080
+          ports:
+            - containerPort: 8080
 
-        env:
-        - name: ASPNETCORE_ENVIRONMENT
-          value: Development
-
-        - name: RabbitMQ__Host
-          value: rabbitmq
+          envFrom:
+            - configMapRef:
+                name: payments-config
+            - secretRef:
+                name: payments-secret

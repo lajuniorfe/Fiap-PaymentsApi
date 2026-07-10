@@ -24,10 +24,6 @@ namespace Payments.API.Consumers
 
         private async Task ProcessOrderAsync(OrderPlacedEvent order)
         {
-            //var paymentResult = await _scopeFactory.ProcessarPagamento(order);
-
-            //await _messageBus.PublishAsync("payment-processed", paymentResult);
-
             using var scope = _scopeFactory.CreateScope();
 
             var pagamentoService = scope.ServiceProvider.GetRequiredService<IPagamentoService>();

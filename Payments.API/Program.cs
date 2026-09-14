@@ -10,7 +10,7 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddSingleton<IMessageBus, RabbitMqMessageBus>(); 
+builder.Services.AddSingleton<IMessageBus, ServiceBusMessageBus>(); 
 builder.Services.AddScoped<IPagamentoService, PagamentoService>();
 builder.Services.AddHostedService<OrderPlacedConsumer>();
 

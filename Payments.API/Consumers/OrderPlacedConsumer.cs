@@ -17,7 +17,7 @@ namespace Payments.API.Consumers
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await _messageBus.SubscribeAsync<OrderPlacedEvent>("order-placed", ProcessOrderAsync);
+           // await _messageBus.SubscribeAsync<OrderPlacedEvent>("order-placed", ProcessOrderAsync);
 
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }

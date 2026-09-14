@@ -6,10 +6,13 @@ namespace Payments.API.Services
     public class PagamentoService : IPagamentoService
     {
         private readonly IMessageBus messageBus;
+        private readonly ILogger _logger;
 
-        public PagamentoService(IMessageBus messageBus)
+
+        public PagamentoService(IMessageBus messageBus, ILoggerFactory loggerFactory)
         {
             this.messageBus = messageBus;
+            this._logger = loggerFactory.CreateLogger<PagamentoService>();
         }
 
         public async Task<PaymentProcessedEvent> ProcessarPagamento(OrderPlacedEvent order)
@@ -28,6 +31,7 @@ namespace Payments.API.Services
             };
 
             await messageBus.PublishAsync("payment-processed",processado);
+            _logger.LogInformation("Enviado ao notification");
 
             return processado;
         }

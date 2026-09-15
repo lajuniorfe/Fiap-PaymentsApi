@@ -1,44 +1,72 @@
-﻿using Azure.Messaging.ServiceBus;
-using Payments.API.Events;
-using Payments.API.Services;
+﻿using Payments.API.Events;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System.Text;
 using System.Text.Json;
 
 namespace Payments.API.Consumers
 {
     public class OrderPlacedConsumer : BackgroundService
     {
-
-        private readonly ServiceBusProcessor _processor;
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<OrderPlacedConsumer> _logger;
 
-        public OrderPlacedConsumer(IConfiguration configuration, IServiceScopeFactory scopeFactory, ILogger<OrderPlacedConsumer> logger)
+        private IConnection? _connection;
+        private IChannel? _channel;
+
+        public OrderPlacedConsumer(
+            IConfiguration configuration,
+            ILogger<OrderPlacedConsumer> logger)
         {
-            _scopeFactory = scopeFactory;
+            _configuration = configuration;
             _logger = logger;
-
-            var connectionString = configuration["ServiceBusConnection"]
-                ?? throw new InvalidOperationException("ServiceBusConnection não configurada.");
-
-            var client = new ServiceBusClient(connectionString);
-
-            _processor = client.CreateProcessor(
-                "order-placed",
-                new ServiceBusProcessorOptions
-                {
-                    AutoCompleteMessages = false,
-                    MaxConcurrentCalls = 1
-                });
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(
+            CancellationToken stoppingToken)
         {
-            _processor.ProcessMessageAsync += ProcessMessageAsync;
-            _processor.ProcessErrorAsync += ProcessErrorAsync;
+            var connectionString =
+                _configuration["RabbitMQConnection"]
+                ?? throw new InvalidOperationException(
+                    "RabbitMQConnection não configurada.");
 
-            await _processor.StartProcessingAsync(stoppingToken);
+            var factory = new ConnectionFactory
+            {
+                Uri = new Uri(connectionString)
+            };
 
-            _logger.LogInformation("Consumer da fila order-placed iniciado.");
+            _connection =
+                await factory.CreateConnectionAsync(
+                    stoppingToken);
+
+            _channel =
+                await _connection.CreateChannelAsync(
+                    cancellationToken: stoppingToken);
+
+            await _channel.QueueDeclareAsync(
+                queue: "order-placed",
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null,
+                cancellationToken: stoppingToken);
+
+            _logger.LogInformation(
+                "Consumer da fila order-placed iniciado.");
+
+            var consumer =
+                new AsyncEventingBasicConsumer(_channel);
+
+            consumer.ReceivedAsync += async (_, args) =>
+            {
+                await ProcessMessageAsync(args);
+            };
+
+            await _channel.BasicConsumeAsync(
+                queue: "order-placed",
+                autoAck: false,
+                consumer: consumer,
+                cancellationToken: stoppingToken);
 
             try
             {
@@ -52,43 +80,46 @@ namespace Payments.API.Consumers
             }
         }
 
-        private async Task ProcessMessageAsync(ProcessMessageEventArgs args)
+        private async Task ProcessMessageAsync(
+            BasicDeliverEventArgs args)
         {
             try
             {
-                var json = args.Message.Body.ToString();
+                var json =
+                    Encoding.UTF8.GetString(
+                        args.Body.ToArray());
 
-                _logger.LogInformation("Mensagem recebida da fila order-placed: {Message}", json);
+                _logger.LogInformation(
+                    "Mensagem recebida da fila order-placed: {Message}",
+                    json);
 
                 var order =
-                    JsonSerializer.Deserialize<OrderPlacedEvent>(json);
+                    JsonSerializer.Deserialize<OrderPlacedEvent>(
+                        json);
 
                 if (order == null)
                 {
                     _logger.LogWarning(
                         "Não foi possível desserializar OrderPlacedEvent.");
 
-                    await args.DeadLetterMessageAsync(
-                        args.Message,
-                        "Mensagem inválida",
-                        "Não foi possível desserializar OrderPlacedEvent.");
+                    await _channel!.BasicNackAsync(
+                        deliveryTag: args.DeliveryTag,
+                        multiple: false,
+                        requeue: false);
 
                     return;
                 }
 
-                using var scope =
-                    _scopeFactory.CreateScope();
-
-                var pagamentoService =
-                    scope.ServiceProvider
-                        .GetRequiredService<IPagamentoService>();
-
-                await pagamentoService.ProcessarPagamento(order);
-
-                await args.CompleteMessageAsync(args.Message);
+                // Futuramente:
+                //
+                // await pagamentoService.ProcessarPagamento(order);
 
                 _logger.LogInformation(
                     "Pedido processado com sucesso.");
+
+                await _channel!.BasicAckAsync(
+                    deliveryTag: args.DeliveryTag,
+                    multiple: false);
             }
             catch (Exception ex)
             {
@@ -96,28 +127,27 @@ namespace Payments.API.Consumers
                     ex,
                     "Erro ao processar mensagem da fila order-placed.");
 
-                await args.AbandonMessageAsync(args.Message);
+                await _channel!.BasicNackAsync(
+                    deliveryTag: args.DeliveryTag,
+                    multiple: false,
+                    requeue: true);
             }
-        }
-
-        private Task ProcessErrorAsync(
-            ProcessErrorEventArgs args)
-        {
-            _logger.LogError(
-                args.Exception,
-                "Erro no Service Bus. Entity: {EntityPath}",
-                args.EntityPath);
-
-            return Task.CompletedTask;
         }
 
         public override async Task StopAsync(
             CancellationToken cancellationToken)
         {
-            await _processor.StopProcessingAsync(
-                cancellationToken);
+            if (_channel != null)
+            {
+                await _channel.CloseAsync(
+                    cancellationToken);
+            }
 
-            await _processor.DisposeAsync();
+            if (_connection != null)
+            {
+                await _connection.CloseAsync(
+                    cancellationToken);
+            }
 
             await base.StopAsync(cancellationToken);
         }

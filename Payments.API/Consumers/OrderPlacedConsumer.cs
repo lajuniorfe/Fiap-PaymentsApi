@@ -1,4 +1,5 @@
 ﻿using Payments.API.Events;
+using Payments.API.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
@@ -10,16 +11,19 @@ namespace Payments.API.Consumers
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<OrderPlacedConsumer> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         private IConnection? _connection;
         private IChannel? _channel;
 
         public OrderPlacedConsumer(
             IConfiguration configuration,
-            ILogger<OrderPlacedConsumer> logger)
+            ILogger<OrderPlacedConsumer> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _configuration = configuration;
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         protected override async Task ExecuteAsync(
@@ -110,9 +114,14 @@ namespace Payments.API.Consumers
                     return;
                 }
 
-                // Futuramente:
-                //
-                // await pagamentoService.ProcessarPagamento(order);
+                using var scope =
+                    _scopeFactory.CreateScope();
+
+                var pagamentoService =
+                    scope.ServiceProvider
+                        .GetRequiredService<IPagamentoService>();
+
+                await pagamentoService.ProcessarPagamento(order);
 
                 _logger.LogInformation(
                     "Pedido processado com sucesso.");
